@@ -1,0 +1,88 @@
+
+#include <MKL25Z4.H>
+#include <stdio.h>
+#include <math.h>
+
+
+void delay(int n) {
+ int i;
+ for(i = 0; i < n; i++) ;
+}
+
+
+int main(void){
+	unsigned long counter = 0;
+	
+	SIM->SCGC5 |= 0x0200;      /* enable clock to Port A*/
+	
+	
+	PORTA->PCR[1] = 0x103; 		/* make PTA1 pin as GPIO and enable pull-up resistor for PTA1 */
+	PORTA->PCR[2] = 0x103;		/* make PTA2 pin as GPIO and enable pull-up resistor for PTA2 */
+	PORTA->PCR[5] = 0x103;		/* make PTA5 pin as GPIO and enable pull-up resistor for PTA5 */
+	PORTA->PCR[12] = 0x100;		/* make PTA12 pin as GPIO */
+	PORTA->PCR[13] = 0x100;		/* make PTA13 pin as GPIO */
+	PORTA->PCR[16] = 0x100;		/* make PTA16 pin as GPIO */
+	PORTA->PCR[17] = 0x100;		/* make PTA17 pin as GPIO */
+	
+	PTA->PDDR &= ~(1UL << 1);    /* make PTA1 as input pin */
+	PTA->PDDR &= ~(1UL << 2);    /* make PTA2 as input pin */
+	PTA->PDDR &= ~(1UL << 5);    /* make PTA5 as input pin */
+	PTA->PDDR |= (1UL << 12);    /* make PTA12 as output pin */
+	PTA->PDDR |= (1UL << 13);    /* make PTA13 as output pin */
+	PTA->PDDR |= (1UL << 16);    /* make PTA16 as output pin */
+	PTA->PDDR |= (1UL << 17);    /* make PTA17 as output pin */
+	
+	
+	//PTA1-swithch2; PTA2-switch3; PTA5-switch1; LEDS: PTA12/PTA13/PTA16/PTA17 
+	
+	while(1){
+	
+		PTA->PDOR = (PTA->PDOR & ~(1UL << 12)) | (((counter >> 3) & 1) << 12);
+		PTA->PDOR = (PTA->PDOR & ~(1UL << 13)) | (((counter >> 2) & 1) << 13);
+		PTA->PDOR = (PTA->PDOR & ~(1UL << 16)) | (((counter >> 1) & 1) << 16);
+		PTA->PDOR = (PTA->PDOR & ~(1UL << 17)) | (((counter >> 0) & 1) << 17);
+
+
+		if ((PTA->PDIR & (1UL<<1)) & ( (PTA->PDIR & (1UL<<2)) >> 1 )) { /*when both switch is open*/
+			if (PTA->PDIR & (1UL<<5)) { /*when switch1 open; when PTA5 is high*/
+				counter = ((counter - 1 + 16) % 16);
+			}
+			else {
+				counter = ((counter + 1) % 16);
+			}
+		}
+		
+		else if (~(PTA->PDIR | ~(1UL<<1)) & ( (~(PTA->PDIR | ~(1UL<<2))) >> 1 )){ /*when both switch is closed*/
+			if (PTA->PDIR & (1UL<<5)) { /*when switch1 open; when PTA5 is high*/
+				counter = ((counter - 1 + 16) % 16);
+			}
+			else {
+				counter = ((counter + 1) % 16);
+			}
+			delay(320000);
+		}
+		
+		else if (~(PTA->PDIR | ~(1UL<<1)) & ( (PTA->PDIR & (1UL<<2)) >> 1 )) { /*switch2 is closed; switch3 is open*/
+			if (PTA->PDIR & (1UL<<5)) { /*when switch1 open; when PTA5 is high*/
+				counter = ((counter - 1 + 16) % 16);
+			}
+			else {
+				counter = ((counter + 1) % 16);
+			}
+			delay(640000);
+		}
+		
+		else { //if ((PTA->PDIR & (1UL<<1)) & ( (~(PTA->PDIR | ~(1UL<<2))) >> 1 )){/*switch2 is open; switch3 is closed*/
+			if (PTA->PDIR & (1UL<<5)) { /*when switch1 open; when PTA5 is high*/
+				counter = ((counter - 1 + 16) % 16);
+			}
+			else {
+				counter = ((counter + 1) % 16);
+			}
+			delay(1280000);
+		}
+	
+	} 
+
+}
+
